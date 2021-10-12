@@ -1,0 +1,49 @@
+﻿@page "/todo"
+@using System.Text.Json
+@using System.Text.Json.Serialization;
+@inject IHttpClientFactory ClientFactory
+
+
+<h1>Todo (@todos.Count(todo => !todo.IsDone))</h1>
+
+<ul>
+    @foreach (var todo in todos)
+    {
+        <li>
+            <input type="checkbox" @bind="todo.IsDone" />
+            <input @bind="todo.Title" />
+        </li>
+    }
+</ul>
+
+<input placeholder="Something todo" @bind="newTodo" />
+<button @onclick="AddTodo">Add todo</button>
+
+@code {
+    private List<TodoItem> todos = new();
+    private string newTodo;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var req = new HttpRequestMessage(HttpMethod.Get, "https://localhost:5001/api/todo");
+        var client = ClientFactory.CreateClient();
+
+        var response = await client.SendAsync(req);
+
+        if (response.IsSuccessStatusCode)
+        {
+            using var responseStream = await response.Content.ReadAsStreamAsync();
+            var branches = await JsonSerializer.DeserializeAsync <object>(responseStream);
+            Console.WriteLine(branches);
+        }
+    }
+
+    private void AddTodo()
+    {
+        if (!string.IsNullOrWhiteSpace(newTodo))
+        {
+            todos.Add(new TodoItem { Title = newTodo });
+            newTodo = string.Empty;
+        }
+    }
+}
